@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn } from "typeorm";
 import { User } from "./users";
+import { Booking } from "./bookings";
 
 export enum EventStatus {
   DRAFT = "DRAFT",
@@ -17,7 +18,7 @@ export class Event {
   title!: string;
 
   @Column("simple-array")
-  categories!: string[]; // Category+ from DTD
+  categories!: string[];
 
   @Column()
   eventType!: string;
@@ -48,7 +49,17 @@ export class Event {
 
   @Column({ type: "int" })
   capacity!: number;
+  
+  @OneToMany(() => TicketType, (ticket: TicketType) => ticket.event, { cascade: true })
+  ticketTypes!: TicketType[];
 
+  @OneToMany(() => Booking, (booking: Booking) => booking.event)
+  bookings!: Booking[];
+  
+  @ManyToOne(() => User)
+  @JoinColumn({ name: "organizerId" })
+  organizer!: User;
+  
   @Column({ type: "enum", enum: EventStatus, default: EventStatus.DRAFT })
   status!: EventStatus;
 
@@ -57,13 +68,6 @@ export class Event {
 
   @Column("simple-array", { nullable: true })
   photos?: string[];
-
-  @ManyToOne(() => User)
-  @JoinColumn({ name: "organizerId" })
-  organizer!: User;
-
-  @OneToMany(() => TicketType, (ticket: TicketType) => ticket.event, { cascade: true })
-  ticketTypes!: TicketType[];
 }
 
 @Entity("ticket_types")
