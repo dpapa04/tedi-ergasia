@@ -25,8 +25,8 @@ export function AdminUsers() {
 
   const pendingCount = users.filter((u) => u.status === 'Pending').length;
 
-  const exportXML = () => download(api.exportXML(), 'text/xml', 'events.xml');
-  const exportJSON = () => download(api.exportJSON(), 'application/json', 'events.json');
+  const exportXML = async () => download(await api.exportXML(), 'text/xml', 'events.xml');
+  const exportJSON = async () => download(await api.exportJSON(), 'application/json', 'events.json');
 
   return (
     <div style={{ background: 'var(--paper)', minHeight: '100vh' }}>
@@ -269,7 +269,7 @@ export function AdminUsers() {
                   {u.status === 'Pending' && (
                     <>
                       <button
-                        onClick={() => api.approveUser(u.u).then(reload)}
+                        onClick={() => api.approveUser(u.id ?? '').then(reload)}
                         style={{
                           background: 'var(--sports)',
                           border: 'none',
@@ -288,7 +288,7 @@ export function AdminUsers() {
                         <Icon name="check" size={16} strokeWidth={2.2} />
                       </button>
                       <button
-                        onClick={() => api.rejectUser(u.u).then(reload)}
+                        onClick={() => api.rejectUser(u.id ?? '').then(reload)}
                         style={{
                           background: 'var(--white)',
                           border: '1px solid var(--line)',

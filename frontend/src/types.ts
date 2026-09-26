@@ -70,6 +70,7 @@ export interface EventItem {
 
 /** A user of the platform (registration + roles + approval). */
 export interface User {
+  id?: string;
   u: string; // username
   name: string;
   role: 'Participant' | 'Organizer' | 'Administrator';

@@ -65,6 +65,33 @@ type BackendEvent = {
   ticketTypes: TicketType[];
 };
 
+type BackendUser = {
+  id: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  role: 'ADMIN' | 'ORGANIZER' | 'ATTENDEE' | 'VISITOR';
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  email: string;
+  phone: string;
+  city: string;
+  vatNumber: string;
+  createdAt: string;
+};
+
+const mapUser = (user: BackendUser): User => ({
+  id: user.id,
+  u: user.username,
+  name: `${user.firstName} ${user.lastName}`,
+  role: user.role === 'ADMIN' ? 'Administrator' : user.role === 'ORGANIZER' ? 'Organizer' : 'Participant',
+  status: user.status === 'PENDING' ? 'Pending' : user.status === 'APPROVED' ? 'Approved' : 'Rejected',
+  email: user.email,
+  phone: user.phone,
+  city: user.city,
+  afm: user.vatNumber,
+  joined: new Date(user.createdAt).toLocaleDateString('en-GB'),
+});
+
 const mapEvent = (event: BackendEvent): EventItem => {
   const start = new Date(event.startDateTime);
   const booked = event.ticketTypes.reduce((sum, ticket) => sum + ticket.quantity - ticket.available, 0);
@@ -234,19 +261,15 @@ export const api = {
 
   /* ---------------- users / admin ---------------- */
   listUsers(): Promise<User[]> {
-    return delay(db.users);
+    return request<BackendUser[]>('/admin/users').then((users) => users.map(mapUser));
   },
 
-  approveUser(username: string): Promise<User | undefined> {
-    const user = db.users.find((u) => u.u === username);
-    if (user) user.status = 'Approved';
-    return delay(user);
+  approveUser(userId: string): Promise<User> {
+    return request<BackendUser>(`/admin/users/${userId}/approve`, { method: 'PATCH' }).then(mapUser);
   },
 
-  rejectUser(username: string): Promise<User | undefined> {
-    const user = db.users.find((u) => u.u === username);
-    if (user) user.status = 'Rejected';
-    return delay(user);
+  rejectUser(userId: string): Promise<User> {
+    return request<BackendUser>(`/admin/users/${userId}/reject`, { method: 'PATCH' }).then(mapUser);
   },
 
   /* ---------------- messaging ---------------- */
@@ -264,12 +287,21 @@ export const api = {
   },
 
   /* ---------------- export (admin) ---------------- */
-  exportJSON(): string {
-    return JSON.stringify({ events: db.events }, null, 2);
+  exportJSON(): Promise<string> {
+    return request<unknown>('/admin/export/json').then((data) => JSON.stringify(data, null, 2));
+  },
+
+  exportXML(): Promise<string> {
+    return fetch('/api/admin/export/xml', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('skene_token') ?? ''}` },
+    }).then(async (response) => {
+      if (!response.ok) throw new Error('Unable to export XML.');
+      return response.text();
+    });
   },
 
   /** Emit the events tree per the assignment DTD. */
-  exportXML(): string {
+  /* exportXML(): string {
     const esc = (s: string | number) =>
       String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const ticketXML = (t: TicketType) =>
@@ -315,5 +347,5 @@ export const api = {
       );
     };
     return `<?xml version="1.0" encoding="UTF-8"?>\n<Events>\n${db.events.map(eventXML).join('\n')}\n</Events>\n`;
-  },
+  }, */
 };
