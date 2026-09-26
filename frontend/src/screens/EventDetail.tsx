@@ -18,9 +18,12 @@ export function EventDetail() {
   useEffect(() => {
     api.getEvent(id!).then((e) => {
       if (!e) nav('/browse');
-      else setEv(e);
+      else {
+        setEv(e);
+        if (!isVisitor && userId) api.recordEventView(e.id).catch(() => undefined);
+      }
     });
-  }, [id, nav]);
+  }, [id, nav, isVisitor, userId]);
 
   if (!ev) return null;
 

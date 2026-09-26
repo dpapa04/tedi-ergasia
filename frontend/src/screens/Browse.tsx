@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { api, priceFrom } from '../services/api';
 import type { EventItem } from '../types';
+import { useApp } from '../state/AppContext';
 
 const CATS = ['All', 'Music', 'Theatre', 'Sports', 'Seminar', 'Film'];
 
@@ -19,6 +20,7 @@ const selectStyle: React.CSSProperties = {
 
 export function Browse() {
   const nav = useNavigate();
+  const { isVisitor } = useApp();
 
   const [cat, setCat] = useState('All');
   const [q, setQ] = useState('');
@@ -28,6 +30,7 @@ export function Browse() {
   const [page, setPage] = useState(1);
   const [cardStyle, setCardStyle] = useState<'A' | 'B' | 'C'>('A');
   const [events, setEvents] = useState<EventItem[]>([]);
+  const [recommendations, setRecommendations] = useState<EventItem[]>([]);
 
   useEffect(() => {
     api.listEvents({ cat, q, city, maxPrice, dateRange }).then((result) => {
@@ -35,6 +38,11 @@ export function Browse() {
       setPage(1);
     });
   }, [cat, q, city, maxPrice, dateRange]);
+
+  useEffect(() => {
+    if (isVisitor) return;
+    api.getRecommendations().then(setRecommendations).catch(() => setRecommendations([]));
+  }, [isVisitor]);
 
   const pageSize = 6;
   const pageCount = Math.max(1, Math.ceil(events.length / pageSize));
@@ -152,6 +160,23 @@ export function Browse() {
             </div>
           </div>
         </div>
+
+        {!isVisitor && recommendations.length > 0 && (
+          <section style={{ marginBottom: 34 }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 12 }}>
+              Recommended for you
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+              {recommendations.map((event) => (
+                <button key={event.id} onClick={() => nav('/events/' + event.id)} style={{ textAlign: 'left', border: '1px solid var(--line)', borderRadius: 14, background: 'var(--white)', padding: 14, cursor: 'pointer' }}>
+                  <div style={{ height: 70, borderRadius: 9, background: event.grad, marginBottom: 10 }} />
+                  <div style={{ fontWeight: 700, fontSize: 13 }}>{event.title}</div>
+                  <div style={{ color: 'var(--mut)', fontSize: 11, marginTop: 4 }}>{event.city}</div>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ===== CARD STYLE A — image-led grid ===== */}
         {cardStyle === 'A' && (

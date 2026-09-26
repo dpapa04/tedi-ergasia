@@ -5,6 +5,7 @@ import { User } from "../entities/users";
 import { Event, TicketType } from "../entities/events";
 import { Booking } from "../entities/bookings";
 import { Message } from "../entities/messages";
+import { EventView } from "../entities/event_views";
 
 dotenv.config();
 
@@ -17,7 +18,7 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME || "edi_ergasia",
   synchronize: process.env.DB_SYNCHRONIZE === "true",
   logging: false,
-  entities: [User, Event, TicketType, Booking, Message],
+  entities: [User, Event, TicketType, Booking, Message, EventView],
   migrations: [],
   subscribers: []
 });

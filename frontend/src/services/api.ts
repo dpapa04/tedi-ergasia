@@ -224,6 +224,14 @@ export const api = {
     return request<BackendEvent>(`/events/${id}`).then(mapEvent);
   },
 
+  recordEventView(id: string): Promise<void> {
+    return request<void>(`/events/${id}/view`, { method: 'POST' });
+  },
+
+  getRecommendations(): Promise<EventItem[]> {
+    return request<{ recommendations: BackendEvent[] }>('/recommendations').then((result) => result.recommendations.map(mapEvent));
+  },
+
   createEvent(payload: Record<string, unknown>): Promise<EventItem> {
     return request<BackendEvent>('/events', {
       method: 'POST',
