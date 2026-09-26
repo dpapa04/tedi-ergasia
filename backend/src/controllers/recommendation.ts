@@ -47,6 +47,14 @@ export const getRecommendations = async (req: AuthRequest, res: Response) => {
         rating: 1.0,
       })));
 
+    if (interactions.length === 0) {
+      const fallback = [...allPublishedEvents]
+        .filter((event) => event.startDateTime.getTime() >= Date.now())
+        .sort((a, b) => a.startDateTime.getTime() - b.startDateTime.getTime())
+        .slice(0, 5);
+      return res.json({ recommendations: fallback, mode: "cold-start" });
+    }
+
     const distinctUsers = Array.from(new Set(interactions.map((i) => i.userId)));
     const distinctEvents = Array.from(new Set(allPublishedEvents.map((e) => e.id)));
 
