@@ -7,6 +7,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 
 import { AppDataSource } from "./src/config/data";
+import { ensureAdminUser } from "./src/config/seed";
 
 // Route Imports
 import authRoutes from "./src/routes/auth";
@@ -52,6 +53,10 @@ app.use((err: any, _req: Request, res: Response, _next: any) => {
 AppDataSource.initialize()
   .then(() => {
     console.log("Database connection established successfully.");
+    return ensureAdminUser();
+  })
+  .then(() => {
+    console.log("Administrator account is ready.");
 
     // Check for SSL Certificates (Self-signed or CA-issued for dev/prod)
     const certPath = path.join(__dirname, "../certs/server.crt");
