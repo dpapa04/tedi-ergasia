@@ -46,6 +46,7 @@ export function App() {
         <Route element={<RequireRole roles={['organizer']} />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/create" element={<CreateEvent />} />
+          <Route path="/create/:id" element={<CreateEvent />} />
         </Route>
         <Route element={<RequireRole roles={['admin']} />}>
           <Route path="/admin" element={<AdminUsers />} />

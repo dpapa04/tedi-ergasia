@@ -47,6 +47,52 @@ export const createEvent = async (req: AuthRequest, res: Response) => {
   return res.status(201).json(await AppDataSource.getRepository(Event).save(event));
 };
 
+export const updateEvent = async (req: AuthRequest, res: Response) => {
+  const repo = AppDataSource.getRepository(Event);
+  const event = await repo.findOne({
+    where: { id: String(req.params.id) },
+    relations: { organizer: true, ticketTypes: true, bookings: true },
+  });
+  if (!event || event.organizer.id !== req.user?.userId) return res.status(404).json({ message: "Event not found." });
+
+  const { title, categories, eventType, venue, address, city, country, latitude, longitude,
+    startDateTime, endDateTime, capacity, tickets, description, photos } = req.body;
+  const nextCapacity = Number(capacity);
+  if (!title || !Array.isArray(categories) || categories.length === 0 || !validTickets(tickets, nextCapacity)) {
+    return res.status(400).json({ message: "Invalid event or ticket data." });
+  }
+
+  const bookedTickets = event.ticketTypes.reduce((sum, ticket) => sum + ticket.quantity - ticket.available, 0);
+  const nextAllocated = tickets.reduce((sum: number, ticket: { quantity: number }) => sum + Number(ticket.quantity), 0);
+  if (nextCapacity < bookedTickets || nextAllocated < bookedTickets) {
+    return res.status(400).json({ message: "Capacity or ticket allocation cannot be lower than existing bookings." });
+  }
+  if (event.bookings.length > 0 && tickets.length !== event.ticketTypes.length) {
+    return res.status(400).json({ message: "Ticket types cannot be added or removed after bookings exist." });
+  }
+
+  Object.assign(event, {
+    title, categories, eventType, venue, address, city, country, latitude, longitude,
+    startDateTime: new Date(startDateTime), endDateTime: new Date(endDateTime), capacity: nextCapacity,
+    description, photos,
+  });
+  if (event.bookings.length === 0) {
+    event.ticketTypes = tickets.map((ticket: { name: string; price: number; quantity: number }) => ({
+      name: ticket.name, price: Number(ticket.price), quantity: Number(ticket.quantity), available: Number(ticket.quantity),
+    })) as TicketType[];
+  } else {
+    event.ticketTypes.forEach((existing, index) => {
+      const next = tickets[index];
+      const sold = existing.quantity - existing.available;
+      existing.name = next.name;
+      existing.price = Number(next.price);
+      existing.quantity = Number(next.quantity);
+      existing.available = Number(next.quantity) - sold;
+    });
+  }
+  return res.json(await repo.save(event));
+};
+
 export const publishEvent = async (req: AuthRequest, res: Response) => {
   const repo = AppDataSource.getRepository(Event);
   const event = await repo.findOne({ where: { id: String(req.params.id) }, relations: { organizer: true, ticketTypes: true } });

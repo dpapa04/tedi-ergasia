@@ -161,7 +161,7 @@ export function Dashboard() {
                   <Icon name="eye" size={15} style={{ marginTop: 2 }} />
                 </button>
                 <button
-                  onClick={() => nav('/create')}
+                  onClick={() => nav('/create/' + e.id)}
                   title="Edit"
                   style={{ width: 34, height: 34, borderRadius: 9, border: '1px solid var(--line)', background: 'var(--white)', cursor: 'pointer', color: 'var(--ink)' }}
                   className="lift"

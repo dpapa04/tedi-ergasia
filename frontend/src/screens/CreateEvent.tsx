@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { api } from '../services/api';
 
@@ -55,12 +55,38 @@ const ticketInputStyle: CSSProperties = {
 
 export function CreateEvent() {
   const nav = useNavigate();
+  const { id } = useParams();
+  const editing = Boolean(id);
+  const [form, setForm] = useState({ title: '', eventType: 'Concert', categories: '', description: '', venue: '', address: '', city: '', country: 'Greece', startDateTime: '', endDateTime: '' });
   const [capacity, setCapacity] = useState('350');
   const [tickets, setTickets] = useState<TicketRow[]>([
     { name: 'General Admission', price: '28', quantity: '250' },
     { name: 'Student', price: '18', quantity: '70' },
   ]);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!id) return;
+    api.getEvent(id).then((event) => {
+      if (!event) return nav('/dashboard');
+      setForm({
+        title: event.title,
+        eventType: event.type,
+        categories: event.cats.join(', '),
+        description: event.desc,
+        venue: event.venue,
+        address: event.addr,
+        city: event.city,
+        country: event.country,
+        startDateTime: new Date(event.startDateTime).toISOString().slice(0, 16),
+        endDateTime: new Date(event.endDateTime).toISOString().slice(0, 16),
+      });
+      setCapacity(String(event.cap));
+      setTickets(event.tickets.map((ticket) => ({ name: ticket.name, price: String(ticket.price), quantity: String(ticket.quantity) })));
+    }).catch(() => nav('/dashboard'));
+  }, [id, nav]);
+
+  const updateForm = (field: keyof typeof form, value: string) => setForm((current) => ({ ...current, [field]: value }));
 
   const allocated = tickets.reduce((a, t) => a + (Number(t.quantity) || 0), 0);
   const overCapacity = allocated > (Number(capacity) || 0);
@@ -81,22 +107,16 @@ export function CreateEvent() {
     event.preventDefault();
     setError('');
     const values = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const payload = {
+      ...form,
+      categories: form.categories.split(',').map((category) => category.trim()).filter(Boolean),
+      capacity: Number(capacity),
+      tickets: tickets.map((ticket) => ({ name: ticket.name.trim(), price: Number(ticket.price), quantity: Number(ticket.quantity) })),
+      ...(editing ? {} : { status: values.submitAction === 'publish' ? 'PUBLISHED' : 'DRAFT' }),
+    };
     try {
-      await api.createEvent({
-        title: values.title,
-        eventType: values.eventType,
-        categories: String(values.categories).split(',').map((category) => category.trim()).filter(Boolean),
-        description: values.description,
-        venue: values.venue,
-        address: values.address,
-        city: values.city,
-        country: values.country,
-        startDateTime: values.startDateTime,
-        endDateTime: values.endDateTime,
-        capacity: Number(values.capacity),
-        tickets: tickets.map((ticket) => ({ name: ticket.name.trim(), price: Number(ticket.price), quantity: Number(ticket.quantity) })),
-        status: values.submitAction === 'publish' ? 'PUBLISHED' : 'DRAFT',
-      });
+      if (editing) await api.updateEvent(id!, payload);
+      else await api.createEvent(payload);
       nav('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to save event.');
@@ -126,21 +146,21 @@ export function CreateEvent() {
           Back to events
         </button>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 10 }}>
-          New event
+          {editing ? 'Edit event' : 'New event'}
         </div>
         <h1 style={{ fontFamily: 'var(--display)', fontWeight: 700, fontSize: 42, letterSpacing: '-.035em', margin: '0 0 30px' }}>
-          Create an event
+          {editing ? 'Edit this event' : 'Create an event'}
         </h1>
 
         <form onSubmit={submit}>
         <div style={cardStyle}>
           <div style={{ ...cardLabelStyle, marginBottom: 18 }}>Basics</div>
           <label style={labelStyle}>Title</label>
-          <input name="title" required placeholder="e.g. Nocturnal — Live" style={{ ...inputStyle, marginBottom: 18 }} />
+          <input name="title" required value={form.title} onChange={(event) => updateForm('title', event.target.value)} placeholder="e.g. Nocturnal — Live" style={{ ...inputStyle, marginBottom: 18 }} />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 18 }}>
             <div>
               <label style={labelStyle}>Event type</label>
-              <select name="eventType" style={inputStyle}>
+              <select name="eventType" value={form.eventType} onChange={(event) => updateForm('eventType', event.target.value)} style={inputStyle}>
                 <option>Concert</option>
                 <option>Theatre</option>
                 <option>Sports</option>
@@ -150,7 +170,7 @@ export function CreateEvent() {
             </div>
             <div>
               <label style={labelStyle}>Categories</label>
-              <input name="categories" required placeholder="Music, Live Performance" style={inputStyle} />
+              <input name="categories" required value={form.categories} onChange={(event) => updateForm('categories', event.target.value)} placeholder="Music, Live Performance" style={inputStyle} />
             </div>
           </div>
           <label style={labelStyle}>Description</label>
@@ -159,6 +179,8 @@ export function CreateEvent() {
             placeholder="Tell guests what to expect…"
             name="description"
             required
+            value={form.description}
+            onChange={(event) => updateForm('description', event.target.value)}
             style={{ ...inputStyle, resize: 'vertical', fontFamily: 'var(--sans)' }}
           />
         </div>
@@ -168,27 +190,27 @@ export function CreateEvent() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div>
               <label style={labelStyle}>Venue</label>
-              <input name="venue" required placeholder="Technopolis" style={inputStyle} />
+              <input name="venue" required value={form.venue} onChange={(event) => updateForm('venue', event.target.value)} placeholder="Technopolis" style={inputStyle} />
             </div>
             <div>
               <label style={labelStyle}>City</label>
-              <input name="city" required placeholder="Athens" style={inputStyle} />
+              <input name="city" required value={form.city} onChange={(event) => updateForm('city', event.target.value)} placeholder="Athens" style={inputStyle} />
             </div>
             <div>
               <label style={labelStyle}>Address</label>
-              <input name="address" required placeholder="25 Central Avenue" style={inputStyle} />
+              <input name="address" required value={form.address} onChange={(event) => updateForm('address', event.target.value)} placeholder="25 Central Avenue" style={inputStyle} />
             </div>
             <div>
               <label style={labelStyle}>Country</label>
-              <input name="country" required defaultValue="Greece" style={inputStyle} />
+              <input name="country" required value={form.country} onChange={(event) => updateForm('country', event.target.value)} style={inputStyle} />
             </div>
             <div>
               <label style={labelStyle}>Starts</label>
-              <input name="startDateTime" required type="datetime-local" style={{ ...inputStyle, color: 'var(--mut)' }} />
+              <input name="startDateTime" required value={form.startDateTime} onChange={(event) => updateForm('startDateTime', event.target.value)} type="datetime-local" style={{ ...inputStyle, color: 'var(--mut)' }} />
             </div>
             <div>
               <label style={labelStyle}>Ends</label>
-              <input name="endDateTime" required type="datetime-local" style={{ ...inputStyle, color: 'var(--mut)' }} />
+              <input name="endDateTime" required value={form.endDateTime} onChange={(event) => updateForm('endDateTime', event.target.value)} type="datetime-local" style={{ ...inputStyle, color: 'var(--mut)' }} />
             </div>
           </div>
         </div>

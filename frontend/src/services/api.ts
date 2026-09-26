@@ -231,6 +231,13 @@ export const api = {
     }).then(mapEvent);
   },
 
+  updateEvent(id: string, payload: Record<string, unknown>): Promise<EventItem> {
+    return request<BackendEvent>(`/events/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }).then(mapEvent);
+  },
+
   deleteEvent(id: string): Promise<void> {
     return request<void>(`/events/${id}`, { method: 'DELETE' });
   },
