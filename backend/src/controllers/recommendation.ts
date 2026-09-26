@@ -3,6 +3,7 @@ import { AppDataSource } from "../config/data";
 import { Booking } from "../entities/bookings";
 import { EventView } from "../entities/event_views";
 import { Event, EventStatus } from "../entities/events";
+import { User } from "../entities/users";
 import { AuthRequest } from "../middleware/user_auth";
 import { BiasedMatrixFactorization } from "../service/recomendations";
 
@@ -18,7 +19,8 @@ export const getRecommendations = async (req: AuthRequest, res: Response) => {
     const eventRepo = AppDataSource.getRepository(Event);
 
     const allPublishedEvents = await eventRepo.find({
-      where: { status: EventStatus.PUBLISHED }
+      where: { status: EventStatus.PUBLISHED },
+      relations: { organizer: true, ticketTypes: true },
     });
 
     const userBookings = await bookingRepo.find({
@@ -88,8 +90,12 @@ export const recordEventView = async (req: AuthRequest, res: Response) => {
   const eventId = String(req.params.id);
   const event = await AppDataSource.getRepository(Event).findOneBy({ id: eventId, status: EventStatus.PUBLISHED });
   if (!event) return res.status(404).json({ message: "Published event not found." });
-  const user = await AppDataSource.getRepository("users").findOneBy({ id: userId });
+  const user = await AppDataSource.getRepository(User).findOneBy({ id: userId });
   if (!user) return res.status(401).json({ message: "Authenticated user not found." });
+  const existingView = await AppDataSource.getRepository(EventView).findOne({
+    where: { user: { id: userId }, event: { id: eventId } },
+  });
+  if (existingView) return res.status(200).json({ recorded: false });
   await AppDataSource.getRepository(EventView).save({ user, event });
   return res.status(201).json({ recorded: true });
 };
