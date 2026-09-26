@@ -63,6 +63,7 @@ type BackendEvent = {
   description: string;
   photos?: string[];
   ticketTypes: TicketType[];
+  bookings?: Array<unknown>;
 };
 
 type BackendUser = {
@@ -142,6 +143,7 @@ const mapEvent = (event: BackendEvent): EventItem => {
     grad: 'linear-gradient(135deg,#324b4a,#8d6c56)',
     color: '#324b4a',
     tickets: event.ticketTypes,
+    bookingCount: event.bookings?.length ?? 0,
   };
 };
 
@@ -222,15 +224,20 @@ export const api = {
     return request<BackendEvent>(`/events/${id}`).then(mapEvent);
   },
 
+  createEvent(payload: Record<string, unknown>): Promise<EventItem> {
+    return request<BackendEvent>('/events', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }).then(mapEvent);
+  },
+
   featured(): Promise<EventItem[]> {
     return delay(['EV1024', 'EV1031', 'EV1063'].map((id) => db.events.find((e) => e.id === id)!));
   },
 
   /** Events owned by the demo organizer, with computed sales. */
   myEvents(): Promise<EventWithSales[]> {
-    return delay(
-      db.myEventIds.map((id) => withSales(db.events.find((e) => e.id === id)!)),
-    );
+    return request<BackendEvent[]>('/events/mine').then((events) => events.map(mapEvent).map(withSales));
   },
 
   /* ---------------- bookings ---------------- */

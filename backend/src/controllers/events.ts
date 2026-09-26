@@ -18,6 +18,15 @@ export const getEvent = async (req: AuthRequest, res: Response) => {
   return res.json(event);
 };
 
+export const getOrganizerEvents = async (req: AuthRequest, res: Response) => {
+  const events = await AppDataSource.getRepository(Event).find({
+    where: { organizer: { id: req.user?.userId } },
+    relations: { organizer: true, ticketTypes: true, bookings: true },
+    order: { startDateTime: "ASC" },
+  });
+  return res.json(events);
+};
+
 export const createEvent = async (req: AuthRequest, res: Response) => {
   const { title, categories, eventType, venue, address, city, country, latitude, longitude,
     startDateTime, endDateTime, capacity, tickets, description, photos, status = EventStatus.DRAFT } = req.body;

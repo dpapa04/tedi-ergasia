@@ -14,6 +14,7 @@ export function Dashboard() {
 
   const totalRev = Math.round(myEvents.reduce((a, e) => a + e.rev, 0));
   const totalSold = myEvents.reduce((a, e) => a + e.sold, 0);
+  const totalBookings = myEvents.reduce((a, e) => a + (e.bookingCount ?? 0), 0);
 
   return (
     <div style={{ background: 'var(--paper)', minHeight: '100vh' }}>
@@ -75,7 +76,7 @@ export function Dashboard() {
             <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--mut-2)', marginBottom: 10 }}>
               Bookings
             </div>
-            <div style={{ fontFamily: 'var(--display)', fontWeight: 800, fontSize: 34, letterSpacing: '-.03em' }}>47</div>
+            <div style={{ fontFamily: 'var(--display)', fontWeight: 800, fontSize: 34, letterSpacing: '-.03em' }}>{totalBookings}</div>
           </div>
         </div>
 

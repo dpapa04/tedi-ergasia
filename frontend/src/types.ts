@@ -66,6 +66,7 @@ export interface EventItem {
   grad: string;
   color: string;
   tickets: TicketType[];
+  bookingCount?: number;
 }
 
 /** A user of the platform (registration + roles + approval). */
