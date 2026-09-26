@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "generate:certs": "sh scripts/generate-dev-certs.sh"
+    "generate:certs": "sh scripts/generate-dev-certs.sh",
+    "prepare:dataset": "node scripts/prepare-recommendation-dataset.js"
   },
   "dependencies": {
     "@types/bcrypt": "^6.0.0",
