@@ -7,10 +7,21 @@ import type { EventWithSales } from '../types';
 export function Dashboard() {
   const nav = useNavigate();
   const [myEvents, setMyEvents] = useState<EventWithSales[]>([]);
+  const [error, setError] = useState('');
+
+  const reload = () => api.myEvents().then(setMyEvents);
 
   useEffect(() => {
-    api.myEvents().then(setMyEvents);
+    reload();
   }, []);
+
+  const removeEvent = (event: EventWithSales) => {
+    const action = event.status === 'DRAFT' ? 'delete' : 'cancel';
+    if (!window.confirm(`Are you sure you want to ${action} "${event.title}"?`)) return;
+    setError('');
+    const operation = event.status === 'DRAFT' ? api.deleteEvent(event.id) : api.cancelEvent(event.id);
+    operation.then(reload).catch((err) => setError(err instanceof Error ? err.message : `Unable to ${action} event.`));
+  };
 
   const totalRev = Math.round(myEvents.reduce((a, e) => a + e.rev, 0));
   const totalSold = myEvents.reduce((a, e) => a + e.sold, 0);
@@ -80,6 +91,7 @@ export function Dashboard() {
           </div>
         </div>
 
+        {error && <div style={{ color: 'var(--accent)', marginBottom: 14 }}>{error}</div>}
         <div style={{ background: 'var(--white)', border: '1px solid var(--line)', borderRadius: 20, overflow: 'hidden' }}>
           <div
             style={{
@@ -156,6 +168,16 @@ export function Dashboard() {
                 >
                   <Icon name="edit" size={15} style={{ marginTop: 2 }} />
                 </button>
+                {(e.status === 'DRAFT' || e.status === 'PUBLISHED') && (
+                  <button
+                    onClick={() => removeEvent(e)}
+                    title={e.status === 'DRAFT' ? 'Delete draft' : 'Cancel event'}
+                    style={{ width: 34, height: 34, borderRadius: 9, border: '1px solid var(--line)', background: 'var(--white)', cursor: 'pointer', color: 'var(--accent)' }}
+                    className="lift"
+                  >
+                    <Icon name="x" size={15} style={{ marginTop: 2 }} />
+                  </button>
+                )}
               </div>
             </div>
           ))}

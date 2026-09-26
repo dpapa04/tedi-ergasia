@@ -231,6 +231,14 @@ export const api = {
     }).then(mapEvent);
   },
 
+  deleteEvent(id: string): Promise<void> {
+    return request<void>(`/events/${id}`, { method: 'DELETE' });
+  },
+
+  cancelEvent(id: string): Promise<void> {
+    return request<void>(`/messages/events/${id}/cancel`, { method: 'PATCH' });
+  },
+
   featured(): Promise<EventItem[]> {
     return delay(['EV1024', 'EV1031', 'EV1063'].map((id) => db.events.find((e) => e.id === id)!));
   },
