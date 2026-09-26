@@ -35,13 +35,42 @@ export const getInbox = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.userId;
     const messages = await messageRepo.find({
       where: { recipient: { id: userId }, deletedByRecipient: false },
-      relations: ["sender", "event"],
+      relations: { sender: true, event: true },
       order: { createdAt: "DESC" }
     });
     return res.json(messages);
   } catch (error) {
     return res.status(500).json({ message: "Failed to fetch inbox.", error });
   }
+};
+
+export const getSent = async (req: AuthRequest, res: Response) => {
+  try {
+    const messages = await messageRepo.find({
+      where: { sender: { id: req.user?.userId }, deletedBySender: false },
+      relations: { recipient: true, event: true },
+      order: { createdAt: "DESC" }
+    });
+    return res.json(messages);
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to fetch sent messages.", error });
+  }
+};
+
+export const markMessageRead = async (req: AuthRequest, res: Response) => {
+  const message = await messageRepo.findOne({ where: { id: String(req.params.id) }, relations: { recipient: true } });
+  if (!message || message.recipient.id !== req.user?.userId) return res.status(404).json({ message: "Message not found." });
+  message.isRead = true;
+  return res.json(await messageRepo.save(message));
+};
+
+export const deleteMessage = async (req: AuthRequest, res: Response) => {
+  const message = await messageRepo.findOne({ where: { id: String(req.params.id) }, relations: { sender: true, recipient: true } });
+  if (!message) return res.status(404).json({ message: "Message not found." });
+  if (message.sender.id === req.user?.userId) message.deletedBySender = true;
+  else if (message.recipient.id === req.user?.userId) message.deletedByRecipient = true;
+  else return res.status(403).json({ message: "You cannot delete this message." });
+  return res.json(await messageRepo.save(message));
 };
 
 export const getUnreadCount = async (req: AuthRequest, res: Response) => {
@@ -60,7 +89,7 @@ export const cancelEvent = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const organizerId = req.user?.userId;
 
-    const event = await eventRepo.findOne({ where: { id }, relations: ["organizer"] });
+    const event = await eventRepo.findOne({ where: { id: String(id) }, relations: { organizer: true } });
 
     if (!event || event.organizer.id !== organizerId) {
       return res.status(403).json({ message: "Unauthorized to cancel this event." });
@@ -71,7 +100,7 @@ export const cancelEvent = async (req: AuthRequest, res: Response) => {
 
     const bookings = await bookingRepo.find({
       where: { event: { id: event.id } },
-      relations: ["attendee"]
+      relations: { attendee: true }
     });
 
     const notifications = bookings.map(b =>

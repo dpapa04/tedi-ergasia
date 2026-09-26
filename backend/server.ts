@@ -13,6 +13,7 @@ import authRoutes from "./src/routes/auth";
 import bookingRoutes from "./src/routes/booking";
 import messagingRoutes from "./src/routes/messaging";
 import searchRoutes from "./src/routes/search";
+import eventRoutes from "./src/routes/events";
 import adminRoutes from "./src/routes/admin";
 import recommendationRoutes from "./src/routes/recommendation";
 
@@ -37,6 +38,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api", bookingRoutes);
 app.use("/api/messages", messagingRoutes);
 app.use("/api/events", searchRoutes);
+app.use("/api/events", eventRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api", recommendationRoutes);
 
@@ -65,10 +67,7 @@ AppDataSource.initialize()
         console.log(`HTTPS Server running on https://localhost:${PORT}`);
       });
     } else {
-      console.warn("SSL certificates missing in /certs. Back to HTTP.");
-      app.listen(PORT, () => {
-        console.log(`HTTP Server running on http://localhost:${PORT}`);
-      });
+      throw new Error("SSL certificates missing in /certs; refusing to start without HTTPS.");
     }
   })
   .catch((error) => {

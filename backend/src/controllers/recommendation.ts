@@ -21,11 +21,11 @@ export const getRecommendations = async (req: AuthRequest, res: Response) => {
 
     const userBookings = await bookingRepo.find({
       where: { attendee: { id: userId } },
-      relations: ["attendee", "event"]
+      relations: { attendee: true, event: true }
     });
 
     const allBookings = await bookingRepo.find({
-      relations: ["attendee", "event"]
+      relations: { attendee: true, event: true }
     });
 
     const interactions = allBookings

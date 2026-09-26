@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { AppDataSource } from "../config/data";
 import { User, UserStatus, UserRole } from "../entities/users";
+import { getJwtSecret } from "../middleware/user_auth";
 
 const userRepository = AppDataSource.getRepository(User);
 
@@ -71,7 +72,7 @@ export const login = async (req: Request, res: Response) => {
 
     const token = jwt.sign(
       { userId: user.id, role: user.role },
-      process.env.JWT_SECRET || "default_secret",
+      getJwtSecret(),
       { expiresIn: "8h" }
     );
 

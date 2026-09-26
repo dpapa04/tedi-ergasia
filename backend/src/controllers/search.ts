@@ -16,11 +16,11 @@ export const searchEvents = async (req: Request, res: Response) => {
     }
 
     if (q) {
-      query.andWhere("(event.title ILIKE :q OR event.description ILIKE :q)", { q: `%${q}%` });
+      query.andWhere("(event.title LIKE :q OR event.description LIKE :q)", { q: `%${q}%` });
     }
 
     if (location) {
-      query.andWhere("(event.city ILIKE :loc OR event.venue ILIKE :loc)", { loc: `%${location}%` });
+      query.andWhere("(event.city LIKE :loc OR event.venue LIKE :loc)", { loc: `%${location}%` });
     }
 
     if (date_from) {
@@ -39,8 +39,12 @@ export const searchEvents = async (req: Request, res: Response) => {
       query.andWhere("ticket.price <= :priceMax", { priceMax: Number(price_max) });
     }
 
+    const pageNumber = Number(page);
     const take = Number(pageSize);
-    const skip = (Number(page) - 1) * take;
+    if (!Number.isInteger(pageNumber) || pageNumber < 1 || !Number.isInteger(take) || take < 1 || take > 100) {
+      return res.status(400).json({ message: "Page must be a positive integer and pageSize must be between 1 and 100." });
+    }
+    const skip = (pageNumber - 1) * take;
 
     query.skip(skip).take(take);
 
@@ -50,7 +54,7 @@ export const searchEvents = async (req: Request, res: Response) => {
       data: events,
       pagination: {
         total,
-        page: Number(page),
+        page: pageNumber,
         pageSize: take,
         totalPages: Math.ceil(total / take)
       }

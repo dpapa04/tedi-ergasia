@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Logo } from '../components/Logo';
 import { Icon } from '../components/Icon';
+import { api } from '../services/api';
 
 const sectionLabel: React.CSSProperties = {
   fontFamily: 'var(--mono)',
@@ -33,6 +34,20 @@ const fieldInput: React.CSSProperties = {
 export function Register() {
   const nav = useNavigate();
   const [registered, setRegistered] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError('');
+    const values = Object.fromEntries(new FormData(event.currentTarget).entries());
+    try {
+      await api.register({ ...values, country: 'Greece' });
+      setRegistered(true);
+      window.scrollTo(0, 0);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to submit registration.');
+    }
+  };
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--paper)' }}>
@@ -127,12 +142,12 @@ export function Register() {
             <p style={{ fontSize: 15.5, color: 'var(--mut)', margin: '0 0 34px' }}>
               One account to discover events and to organize your own.
             </p>
-            <div style={{ background: 'var(--white)', border: '1px solid var(--line)', borderRadius: 24, padding: 34 }}>
+            <form onSubmit={submit} style={{ background: 'var(--white)', border: '1px solid var(--line)', borderRadius: 24, padding: 34 }}>
               <div style={sectionLabel}>Account</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
                 <div style={{ gridColumn: '1/-1' }}>
                   <label style={fieldLabel}>Username</label>
-                  <input placeholder="e.g. nikos_k" style={fieldInput} />
+                  <input name="username" required placeholder="e.g. nikos_k" style={fieldInput} />
                   <span
                     style={{
                       display: 'flex',
@@ -149,42 +164,42 @@ export function Register() {
                 </div>
                 <div>
                   <label style={fieldLabel}>Password</label>
-                  <input type="password" placeholder="••••••••" style={fieldInput} />
+                  <input name="password" required type="password" placeholder="••••••••" style={fieldInput} />
                 </div>
                 <div>
                   <label style={fieldLabel}>Confirm password</label>
-                  <input type="password" placeholder="••••••••" style={fieldInput} />
+                  <input name="confirmPassword" required type="password" placeholder="••••••••" style={fieldInput} />
                 </div>
               </div>
               <div style={sectionLabel}>Personal details</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
                   <label style={fieldLabel}>First name</label>
-                  <input style={fieldInput} />
+                  <input name="firstName" required style={fieldInput} />
                 </div>
                 <div>
                   <label style={fieldLabel}>Last name</label>
-                  <input style={fieldInput} />
+                  <input name="lastName" required style={fieldInput} />
                 </div>
                 <div>
                   <label style={fieldLabel}>Email</label>
-                  <input type="email" style={fieldInput} />
+                  <input name="email" required type="email" style={fieldInput} />
                 </div>
                 <div>
                   <label style={fieldLabel}>Phone</label>
-                  <input style={fieldInput} />
+                  <input name="phone" required style={fieldInput} />
                 </div>
                 <div style={{ gridColumn: '1/-1' }}>
                   <label style={fieldLabel}>Address</label>
-                  <input style={fieldInput} />
+                  <input name="address" required style={fieldInput} />
                 </div>
                 <div>
                   <label style={fieldLabel}>City</label>
-                  <input style={fieldInput} />
+                  <input name="city" required style={fieldInput} />
                 </div>
                 <div>
                   <label style={fieldLabel}>Tax ID (ΑΦΜ)</label>
-                  <input style={fieldInput} />
+                  <input name="vatNumber" required style={fieldInput} />
                 </div>
               </div>
               <label
@@ -205,11 +220,8 @@ export function Register() {
                 />
                 I agree to the Terms of Service and acknowledge the Privacy Policy.
               </label>
-              <button
-                onClick={() => {
-                  setRegistered(true);
-                  window.scrollTo(0, 0);
-                }}
+              {error && <div style={{ color: 'var(--accent)', marginTop: 20 }}>{error}</div>}
+              <button type="submit"
                 style={{
                   width: '100%',
                   background: 'var(--accent)',
@@ -226,7 +238,7 @@ export function Register() {
               >
                 Create account
               </button>
-            </div>
+            </form>
             <div style={{ textAlign: 'center', marginTop: 22, fontSize: 14, color: 'var(--mut)' }}>
               Already have an account?{' '}
               <span

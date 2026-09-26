@@ -22,6 +22,11 @@ export function Nav() {
   const tab = (path: string) => (loc.pathname === path ? 'var(--ink)' : 'var(--mut)');
 
   const pickRole = (r: Role) => {
+    const storedRole = (JSON.parse(localStorage.getItem('skene_user') ?? 'null')?.role as string | undefined)?.toLowerCase();
+    if (!storedRole || r !== storedRole) {
+      setMenuOpen(false);
+      return;
+    }
     setRole(r);
     setMenuOpen(false);
     if (r === 'admin') nav('/admin');

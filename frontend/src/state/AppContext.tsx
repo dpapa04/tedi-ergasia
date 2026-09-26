@@ -34,7 +34,10 @@ interface AppState {
 const AppCtx = createContext<AppState | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [role, setRole] = useState<Role>('participant');
+  const [role, setRole] = useState<Role>(() => {
+    const storedRole = JSON.parse(localStorage.getItem('skene_user') ?? 'null')?.role as string | undefined;
+    return storedRole ? storedRole.toLowerCase() as Role : 'visitor';
+  });
   const [lastBooking, setLastBooking] = useState<BookingResult | null>(null);
 
   const value = useMemo<AppState>(() => {
@@ -42,7 +45,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return {
       role,
       setRole,
-      userId: 'maria21',
+      userId: JSON.parse(localStorage.getItem('skene_user') ?? 'null')?.id ?? '',
       isVisitor: role === 'visitor',
       isOrganizer: role === 'organizer',
       isAdmin: role === 'admin',

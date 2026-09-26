@@ -1,9 +1,27 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Logo } from '../components/Logo';
 import { Icon } from '../components/Icon';
+import { api } from '../services/api';
 
 export function Login() {
   const nav = useNavigate();
+  const [username, setUsername] = useState('maria21');
+  const [password, setPassword] = useState('password');
+  const [error, setError] = useState('');
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError('');
+    try {
+      const result = await api.login(username, password);
+      localStorage.setItem('skene_token', result.token);
+      localStorage.setItem('skene_user', JSON.stringify(result.user));
+      nav(result.user.role === 'ADMIN' ? '/admin' : '/browse');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to log in.');
+    }
+  };
 
   return (
     <div style={{ minHeight: '100vh', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
@@ -66,7 +84,7 @@ export function Login() {
 
       {/* ---------------- right form ---------------- */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48 }}>
-        <div style={{ width: '100%', maxWidth: 380 }}>
+        <form onSubmit={submit} style={{ width: '100%', maxWidth: 380 }}>
           <div
             style={{
               fontFamily: 'var(--mono)',
@@ -94,7 +112,8 @@ export function Login() {
             Username
           </label>
           <input
-            defaultValue="maria21"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
             style={{
               width: '100%',
               padding: '14px 16px',
@@ -111,7 +130,8 @@ export function Login() {
           </label>
           <input
             type="password"
-            defaultValue="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
             style={{
               width: '100%',
               padding: '14px 16px',
@@ -138,8 +158,8 @@ export function Login() {
             </label>
             <span style={{ color: 'var(--accent)', fontWeight: 600, cursor: 'pointer' }}>Forgot password?</span>
           </div>
-          <button
-            onClick={() => nav('/browse')}
+          {error && <div style={{ color: 'var(--accent)', marginBottom: 14 }}>{error}</div>}
+          <button type="submit"
             style={{
               width: '100%',
               background: 'var(--accent)',
@@ -170,7 +190,7 @@ export function Login() {
               Create an account
             </span>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );

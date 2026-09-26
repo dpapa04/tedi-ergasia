@@ -25,12 +25,76 @@ const db = {
   myEventIds: [...MY_EVENT_IDS],
 };
 
-let bookingSeq = 7731;
-const nextBookingRef = () => `SKN-B${bookingSeq++}`;
-
 /** simulate network latency so loading states are exercised */
 const delay = <T>(value: T, ms = 120): Promise<T> =>
   new Promise((resolve) => setTimeout(() => resolve(value), ms));
+
+const request = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
+  const token = localStorage.getItem('skene_token');
+  const response = await fetch(`/api${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...init.headers,
+    },
+  });
+  const body = await response.json().catch(() => undefined);
+  if (!response.ok) throw new Error(body?.message ?? 'Request failed');
+  return body as T;
+};
+
+type BackendEvent = {
+  id: string;
+  title: string;
+  categories: string[];
+  eventType: string;
+  venue: string;
+  address: string;
+  city: string;
+  country: string;
+  latitude?: number;
+  longitude?: number;
+  startDateTime: string;
+  endDateTime: string;
+  capacity: number;
+  status: EventItem['status'];
+  organizer?: { username: string };
+  description: string;
+  photos?: string[];
+  ticketTypes: TicketType[];
+};
+
+const mapEvent = (event: BackendEvent): EventItem => {
+  const start = new Date(event.startDateTime);
+  const booked = event.ticketTypes.reduce((sum, ticket) => sum + ticket.quantity - ticket.available, 0);
+  return {
+    id: event.id,
+    title: event.title,
+    cat: event.categories[0] ?? 'Other',
+    cats: event.categories,
+    type: event.eventType,
+    venue: event.venue,
+    addr: event.address,
+    city: event.city,
+    country: event.country,
+    geo: { lat: Number(event.latitude ?? 0), lng: Number(event.longitude ?? 0) },
+    dateShort: start.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
+    dateLong: start.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+    time: start.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+    startDateTime: event.startDateTime,
+    endDateTime: event.endDateTime,
+    cap: event.capacity,
+    booked,
+    status: event.status,
+    org: event.organizer?.username ?? '',
+    desc: event.description,
+    media: event.photos ?? [],
+    grad: 'linear-gradient(135deg,#324b4a,#8d6c56)',
+    color: '#324b4a',
+    tickets: event.ticketTypes,
+  };
+};
 
 export const priceFrom = (e: EventItem): number =>
   Math.min(...e.tickets.map((t) => t.price));
@@ -56,9 +120,37 @@ export interface EventFilter {
 }
 
 export const api = {
+  login(username: string, password: string) {
+    return request<{ token: string; user: { id: string; username: string; role: string } }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    });
+  },
+
+  register(payload: Record<string, unknown>) {
+    return request<{ message: string }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
   /* ---------------- events ---------------- */
   listEvents(filter: EventFilter = {}): Promise<EventItem[]> {
     const { cat = 'All', q = '', city, maxPrice, dateRange } = filter;
+    const params = new URLSearchParams();
+    if (cat !== 'All') params.set('category', cat);
+    if (q) params.set('q', q);
+    if (city && city !== 'Any location') params.set('location', city);
+    if (maxPrice != null) params.set('price_max', String(maxPrice));
+    if (dateRange) {
+      const now = new Date();
+      const end = new Date(now);
+      end.setDate(end.getDate() + (dateRange === 'week' ? 7 : 30));
+      params.set('date_from', now.toISOString());
+      params.set('date_to', end.toISOString());
+    }
+    return request<{ data: BackendEvent[] }>(`/events?${params}`).then((result) => result.data.map(mapEvent));
+    /*
     const qq = q.trim().toLowerCase();
     const now = new Date();
     const rangeEnd = dateRange
@@ -74,11 +166,11 @@ export const api = {
       const matches = !qq || haystack.includes(qq);
       return inCat && inCity && inPrice && inDate && matches;
     });
-    return delay(result);
+    return delay(result); */
   },
 
   getEvent(id: string): Promise<EventItem | undefined> {
-    return delay(db.events.find((e) => e.id === id));
+    return request<BackendEvent>(`/events/${id}`).then(mapEvent);
   },
 
   featured(): Promise<EventItem[]> {
@@ -105,6 +197,14 @@ export const api = {
     qty: number,
     attendee: string,
   ): Promise<{ ref: string; booking: Booking }> {
+    return request<{ ref: string; bookingId: string; totalCost: number; createdAt: string }>('/bookings', {
+      method: 'POST',
+      body: JSON.stringify({ eventId, ticketTypeId, numberOfTickets: qty }),
+    }).then((result) => ({
+      ref: result.ref,
+      booking: { id: result.bookingId, eventId, attendee, time: result.createdAt, ticketTypeRef: ticketTypeId, numberOfTickets: qty, totalCost: result.totalCost, bookingStatus: 'CONFIRMED' },
+    }));
+    /*
     const event = db.events.find((e) => e.id === eventId);
     if (!event) return Promise.reject(new Error('Event not found'));
     if (event.status !== 'PUBLISHED') return Promise.reject(new Error('Event is not open for booking'));
@@ -129,7 +229,7 @@ export const api = {
       bookingStatus: 'CONFIRMED',
     };
     db.bookings.push(booking);
-    return delay({ ref: nextBookingRef(), booking });
+    return delay({ ref: nextBookingRef(), booking }); */
   },
 
   /* ---------------- users / admin ---------------- */

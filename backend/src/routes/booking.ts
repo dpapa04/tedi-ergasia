@@ -5,6 +5,6 @@ import { UserRole } from "../entities/users";
 
 const router = Router();
 
-router.post("/bookings", authenticateToken, authorizeRoles(UserRole.ATTENDEE, UserRole.ORGANIZER), createBooking);
+router.post("/bookings", authenticateToken, authorizeRoles(UserRole.ATTENDEE), createBooking);
 
 export default router;
