@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "generate:certs": "sh scripts/generate-dev-certs.sh"
+  },
   "dependencies": {
     "@types/bcrypt": "^6.0.0",
     "@types/jsonwebtoken": "^9.0.10",
