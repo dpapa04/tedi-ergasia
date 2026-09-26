@@ -24,11 +24,20 @@ export function Messages() {
     loadCounts();
   }, []);
 
-  const remove = (id: number) => {
+  const remove = (id: string | number) => {
     api.deleteMessage(id).then(() => {
       api.listMessages(folder).then(setMsgs);
       loadCounts();
     });
+  };
+
+  const openMessage = (message: Message) => {
+    if (folder === 'inbox' && message.unread) {
+      api.markMessageRead(message.id).then(() => {
+        setMsgs((current) => current.map((item) => (item.id === message.id ? { ...item, unread: false } : item)));
+        setUnread((count) => Math.max(0, count - 1));
+      });
+    }
   };
 
   return (
@@ -158,6 +167,7 @@ export function Messages() {
               <div
                 key={m.id}
                 className="msg-row"
+                onClick={() => openMessage(m)}
                 style={{
                   display: 'flex',
                   gap: 15,

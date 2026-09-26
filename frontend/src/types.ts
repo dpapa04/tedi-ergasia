@@ -84,7 +84,7 @@ export interface User {
 
 /** A message in the inbox/sent messaging folders. */
 export interface Message {
-  id: number;
+  id: string | number;
   folder: 'inbox' | 'sent';
   from: string;
   sub: string;

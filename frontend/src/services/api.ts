@@ -79,6 +79,17 @@ type BackendUser = {
   createdAt: string;
 };
 
+type BackendMessage = {
+  id: string;
+  sender?: { username: string };
+  recipient?: { username: string };
+  event?: { title: string };
+  subject: string;
+  body: string;
+  isRead: boolean;
+  createdAt: string;
+};
+
 const mapUser = (user: BackendUser): User => ({
   id: user.id,
   u: user.username,
@@ -90,6 +101,17 @@ const mapUser = (user: BackendUser): User => ({
   city: user.city,
   afm: user.vatNumber,
   joined: new Date(user.createdAt).toLocaleDateString('en-GB'),
+});
+
+const mapMessage = (message: BackendMessage, folder: 'inbox' | 'sent'): Message => ({
+  id: message.id,
+  folder,
+  from: folder === 'inbox' ? message.sender?.username ?? 'Unknown sender' : message.recipient?.username ?? 'Unknown recipient',
+  sub: message.subject,
+  body: message.body,
+  time: new Date(message.createdAt).toLocaleString('en-GB'),
+  unread: folder === 'inbox' && !message.isRead,
+  ev: message.event?.title ?? 'General',
 });
 
 const mapEvent = (event: BackendEvent): EventItem => {
@@ -274,16 +296,19 @@ export const api = {
 
   /* ---------------- messaging ---------------- */
   listMessages(folder: 'inbox' | 'sent'): Promise<Message[]> {
-    return delay(db.messages.filter((m) => m.folder === folder));
+    return request<BackendMessage[]>(`/messages/${folder}`).then((messages) => messages.map((message) => mapMessage(message, folder)));
   },
 
-  deleteMessage(id: number): Promise<void> {
-    db.messages = db.messages.filter((m) => m.id !== id);
-    return delay(undefined);
+  deleteMessage(id: string | number): Promise<void> {
+    return request<void>(`/messages/${id}`, { method: 'DELETE' });
+  },
+
+  markMessageRead(id: string | number): Promise<void> {
+    return request<void>(`/messages/${id}/read`, { method: 'PATCH' });
   },
 
   unreadCount(): Promise<number> {
-    return delay(db.messages.filter((m) => m.folder === 'inbox' && m.unread).length);
+    return request<{ unreadCount: number }>('/messages/unread-count').then((result) => result.unreadCount);
   },
 
   /* ---------------- export (admin) ---------------- */
